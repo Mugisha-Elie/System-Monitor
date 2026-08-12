@@ -37,15 +37,22 @@ const server = http.createServer((req, res) => {
   }
 
   if (req.method === 'GET' && pathName === '/api/process') {
+    const unit = parsedUrl.searchParams.get('unit')?.toLowerCase() || 'mb';
     const memory = process.memoryUsage();
+
+    let divisor = 1024 * 1024;
+    if (unit === 'gb') divisor = 1024 * 1024 * 1024;
+    if (unit === 'kb') divisor = 1024;
+    if (unit === 'bytes') divisor = 1;
+    
     const processInfo = {
       pid: process.pid,
       nodeVersion: process.version,
       processUptimeSeconds: process.uptime().toFixed(2),
       memoryUsageMB: {
-        rss: (memory.rss / 1024 / 1024).toFixed(2),
-        heapTotal: (memory.heapTotal / 1024 / 1024).toFixed(2),
-        heapUsed: (memory.heapUsed / 1024 / 1024).toFixed(2)
+        rss: (memory.rss / divisor).toFixed(2),
+        heapTotal: (memory.heapTotal / divisor).toFixed(2),
+        heapUsed: (memory.heapUsed / divisor).toFixed(2)
       }
     };
     res.statusCode = 200;
