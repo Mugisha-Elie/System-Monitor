@@ -1,32 +1,62 @@
 import http from 'node:http'
 import os from 'node:os'
+import { parse } from 'node:path/win32';
 
 process.loadEnvFile();
 
 const PORT = process.env.PORT || 5000;
 
 const server = http.createServer((req, res) => {
-  const systemInfo = {
-    platform: os.platform(),
-    architecture: os.arch(),
-    totalMemoryGB: (os.totalmem() / 1024 / 1024 / 1024).toFixed(2),
-    freeMemoryGB: (os.freemem() / 1024 / 1024 / 1024).toFixed(2),
-    uptimeSeconds: os.uptime()
-  }
-  
-  res.writeHead(200,
-    {
-      'Content-Type': 'application/json',
-      'access-control-allow-origin': '*',
-      'access-control-allow-methods': 'GET, OPTIONS'
-    });
+  const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+  const pathName = parsedUrl.pathname;
+
+
+  res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', '*');
 
   if (req.method === 'OPTIONS') {
+    res.statusCode = 204;
     res.end();
     return;
   }
-  res.end(JSON.stringify(systemInfo, null, 2));
-})
+  
+
+  if (req.method === 'GET' && pathName === '/api/status') {
+    const systemInfo = {
+      platform: os.platform(),
+      architecture: os.arch(),
+      totalMemoryGB: (os.totalmem() / 1024 / 1024 / 1024).toFixed(2),
+      freeMemoryGB: (os.freemem() / 1024 / 1024 / 1024).toFixed(2),
+      uptimeSeconds: os.uptime()
+    }
+    res.statusCode = 200;
+    res.end(JSON.stringify(systemInfo, null, 2));
+    return;
+  }
+
+  if (req.method === 'GET' && pathName === '/api/process') {
+    const memory = process.memoryUsage();
+    const processInfo = {
+      pid: process.pid,
+      nodeVersion: process.version,
+      processUptimeSeconds: process.uptime().toFixed(2),
+      memoryUsageMB: {
+        rss: (memory.rss / 1024 / 1024).toFixed(2),
+        heapTotal: (memory.heapTotal / 1024 / 1024).toFixed(2),
+        heapUsed: (memory.heapUsed / 1024 / 1024).toFixed(2)
+      }
+    };
+    res.statusCode = 200;
+    res.end(JSON.stringify(processInfo, null, 2))
+    return;
+  }
+
+  res.statusCode = 404
+  res.setHeader('Content-Type', 'application/json');
+  res.end(JSON.stringify({ error: 'Endpoint Not Found', path: pathName }));
+});
 
 server.listen(PORT, () => {
   console.log(`Server listening at http://localhost:${PORT}`);
