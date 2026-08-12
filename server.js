@@ -14,7 +14,17 @@ const server = http.createServer((req, res) => {
     uptimeSeconds: os.uptime()
   }
   
-  res.writeHead(200, { 'Content-Type': 'application/json' });
+  res.writeHead(200,
+    {
+      'Content-Type': 'application/json',
+      'access-control-allow-origin': '*',
+      'access-control-allow-methods': 'GET, OPTIONS'
+    });
+
+  if (req.method === 'OPTIONS') {
+    res.end();
+    return;
+  }
   res.end(JSON.stringify(systemInfo, null, 2));
 })
 
